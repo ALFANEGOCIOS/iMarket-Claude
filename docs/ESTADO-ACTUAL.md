@@ -321,3 +321,11 @@ retomarlo sin perder contexto.
 - Filtros en móvil: ahora son una hoja a pantalla completa que sube desde abajo, con encabezado fijo (cerrar y Limpiar), contenido con scroll y botón "Ver N resultados" fijo abajo; bloquea el scroll de fondo y cierra con Escape.
 - Casillas, campos y bordes de formularios más visibles en toda la web (escritorio, móvil y dashboard): bordes más oscuros y casillas de 20 px; las casillas de términos ahora usan el Checkbox de shadcn.
 - Ventanas (publicar, detalle, etc.) en móvil: pantalla completa, sin desplazamiento lateral, formulario en una columna, botón cerrar fijo. En escritorio no cambia.
+
+---
+## Dashboard rediseñado (estilo "Panel del vendedor")
+- Barra lateral oscura con logo, navegación (Resumen, Identidades, Anuncios, Destacados, Usuarios, Reportes, Ventas) con contadores de pendientes, y datos del administrador + Salir.
+- Resumen: 4 tarjetas (ventas del mes con variación vs. mes anterior, ventas confirmadas, anuncios publicados, usuarios), gráfica de ventas con selector 7/30/90 días y pico, modelos más vendidos, ventas recientes y "Por atender" (identidades, anuncios por revisar, reportes, ventas sin confirmar; cada fila abre su pestaña).
+- Todo se calcula con datos reales de Supabase (ventas confirmadas, anuncios, reportes). En móvil la barra lateral pasa arriba como menú horizontal.
+- No hay datos de pedidos/envíos/disputas/IMEI como en el PDF de muestra: no existen en el proyecto todavía.
+- Skeleton de carga: ahora aparece debajo de la barra de búsqueda, en el lugar de los anuncios (antes salía encima).

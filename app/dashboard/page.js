@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, LogOut, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
@@ -41,17 +40,7 @@ export default function DashboardPage() {
 
   return (
     <main className="admin-page">
-      <header className="admin-header">
-        <div className="admin-header-inner">
-          <Link href="/" className="auth-brand"><img src="/brand/logo-icon.png" alt="" width="30" height="30" className="auth-brand-logo" />iMarket</Link>
-          <div className="admin-title"><ShieldCheck size={17} /><span>Centro de administración</span></div>
-          <div className="admin-user"><span>{state.user?.display_name || "Administrador"}</span><button onClick={logout}><LogOut size={15} /> Salir</button></div>
-        </div>
-      </header>
-      <section className="admin-content">
-        <div className="admin-page-heading"><div><span className="admin-eyebrow">Control interno</span><h1>Dashboard</h1><p>Supervisa iMarket, revisa solicitudes y gestiona la comunidad.</p></div><Link href="/" className="admin-back-link"><ArrowLeft size={15} /> Ver marketplace</Link></div>
-        <AdminPanel repository={state.repository} notify={setToast} />
-      </section>
+      <AdminPanel repository={state.repository} notify={setToast} user={state.user} onLogout={logout} />
       {toast && <div className="toast toast-visible"><span>{toast}</span><button onClick={() => setToast("")}>×</button></div>}
     </main>
   );

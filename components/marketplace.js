@@ -965,17 +965,6 @@ export default function Marketplace() {
                   </Button>
                 </div>
               )}
-              {live && remote.loading && !results.length && (
-                <div className="product-grid" role="status" aria-label="Cargando iPhones">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div className="product-card-skeleton" key={i}>
-                      <Skeleton className="skeleton-image" />
-                      <Skeleton className="skeleton-line" />
-                      <Skeleton className="skeleton-line short" />
-                    </div>
-                  ))}
-                </div>
-              )}
               <div className="search-toolbar">
                 <div className="search-field">
                   <Search size={19} />
@@ -1075,7 +1064,17 @@ export default function Marketplace() {
                   </button>
                 </div>
               )}
-              {results.length ? (
+              {live && remote.loading && !results.length ? (
+                <div className="product-grid" role="status" aria-label="Cargando iPhones">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div className="product-card-skeleton" key={i}>
+                      <Skeleton className="skeleton-image" />
+                      <Skeleton className="skeleton-line" />
+                      <Skeleton className="skeleton-line short" />
+                    </div>
+                  ))}
+                </div>
+              ) : results.length ? (
                 <div className="product-grid">
                   {results.slice(0, visible).map((item) => (
                     <article className="product-card" key={item.id}>
