@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata = {
   title: "iMarket — Tu próximo iPhone está aquí",
@@ -20,6 +21,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <Toaster richColors closeButton />
+        <SpeedInsights />
       </body>
     </html>
   );
