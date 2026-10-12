@@ -46,6 +46,7 @@ import {
 } from "./live-panels";
 import { toast } from "sonner";
 import Modal from "./modal";
+import FeaturedShowcase from "./featured-showcase";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -671,35 +672,21 @@ export default function Marketplace() {
           </div>
         </section>
         {live && remote.featured?.length > 0 && (
-          <section className="featured-strip" aria-label="Anuncios destacados">
-            <div className="section-kicker">
-              <span /> DESTACADOS
-            </div>
-            <div className="featured-row">
-              {remote.featured.map((item) => (
-                <button
-                  key={item.id}
-                  className="featured-card"
-                  onClick={() => openListing(item)}
-                >
-                  <img
-                    src={item.image}
-                    alt={`${item.model} en ${item.color}`}
-                    loading="lazy"
-                  />
-                  <span className="featured-badge">
-                    <Sparkles size={11} /> Destacado
-                  </span>
-                  <div>
-                    <strong>
-                      {item.model} · {item.storage} GB
-                    </strong>
-                    <span>${item.price} USD</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
+          <FeaturedShowcase
+            items={remote.featured}
+            favorites={favorites}
+            onOpen={openListing}
+            onContact={(item) => {
+              if (!user) {
+                router.push("/login");
+                return;
+              }
+              openListing(item);
+              if (item.sellerId !== user.id) setContact(true);
+            }}
+            onToggleFavorite={toggleFavorite}
+            onPromote={openPublish}
+          />
         )}
         <section className="benefits" aria-label="Ventajas de iMarket">
           <div>

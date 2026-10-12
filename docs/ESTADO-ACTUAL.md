@@ -329,3 +329,4 @@ retomarlo sin perder contexto.
 - Todo se calcula con datos reales de Supabase (ventas confirmadas, anuncios, reportes). En móvil la barra lateral pasa arriba como menú horizontal.
 - No hay datos de pedidos/envíos/disputas/IMEI como en el PDF de muestra: no existen en el proyecto todavía.
 - Skeleton de carga: ahora aparece debajo de la barra de búsqueda, en el lugar de los anuncios (antes salía encima).
+- Destacados rediseñados: vitrina con tarjeta principal grande (foto, precio, vendedor verificado, "Ver iPhone" y "Escribir al vendedor"), 2 tarjetas laterales, paginador 1/N con rotación automática y botón "¿Quieres destacar tu iPhone?" (por ahora abre el formulario de publicar; falta definir el flujo real de pago/promoción). Archivo: components/featured-showcase.js
