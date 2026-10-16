@@ -3876,3 +3876,13 @@ select {
   [data-slot="dialog-content"] .detail-spec-grid span,
   [data-slot="dialog-content"] .detail-spec-grid strong { font-size: 14px; }
 }
+
+/* Evita que algún elemento ancho agrande la página en móvil (provocaba ventanas corridas y texto cortado) */
+html, body { max-width: 100%; overflow-x: clip; }
+@media (max-width: 640px) {
+  .hero-actions { flex-wrap: wrap; gap: 12px 16px; align-items: center; }
+  .hero-actions .button, .hero-actions button { font-size: 14px; min-height: 46px; padding: 12px 18px; white-space: nowrap; }
+  .hero-actions > button:last-child { padding-left: 4px; padding-right: 4px; }
+  .hero-copy { min-width: 0; max-width: 100%; }
+  .hero, .hero-visual { overflow-x: clip; max-width: 100%; }
+}
