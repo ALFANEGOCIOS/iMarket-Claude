@@ -1250,7 +1250,7 @@ export default function Marketplace() {
           <button onClick={() => router.push("/seguridad")}>
             Seguridad y privacidad
           </button>
-          <span>© {new Date().getFullYear()} iMarket · v18-oct</span>
+          <span>© {new Date().getFullYear()} iMarket · v18-oct-b</span>
         </div>
       </footer>
 

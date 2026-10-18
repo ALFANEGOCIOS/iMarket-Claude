@@ -333,3 +333,4 @@ retomarlo sin perder contexto.
 - Corrección móvil: las ventanas (detalle de anuncio, publicar) se desplazaban a un lado por la propiedad translate de Tailwind v4; ahora ocupan la pantalla completa y se pueden desplazar.
 - Móvil: se eliminó el desbordamiento horizontal de la página (botones del hero "Encuentra tu iPhone / Quiero vender" ensanchaban la pantalla y dejaban las ventanas cortadas y corridas). html/body con overflow-x: clip.
 - Ventanas: se quitó el centrado con translate (se aplicaba dos veces y dejaba la ventana corrida a la izquierda); ahora se centran con inset-0 + m-auto y en móvil ocupan toda la pantalla. El pie muestra "v18-oct" para comprobar que se desplegó esta versión.
+- Detalle del anuncio: la foto principal se adapta al ancho (altura entre 190 y 310 px, imagen contenida), así no tapa las miniaturas en pantallas muy pequeñas. Marca de versión: v18-oct-b.
