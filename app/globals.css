@@ -215,7 +215,8 @@ select {
 .icon-button:hover {
   background: var(--border);
 }
-.favorites-nav {
+.favorites-nav,
+.notifications-nav {
   position: relative;
 }
 .favorite-count {
@@ -3891,3 +3892,33 @@ html, body { max-width: 100%; overflow-x: clip; }
 .detail-image > img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; }
 .detail-gallery { min-width: 0; max-width: 100%; }
 .photo-thumbnails { flex-wrap: wrap; }
+
+.views-chip { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; color: var(--muted-foreground); font-weight: 600; }
+.product-location { display: flex; align-items: center; gap: 4px; }
+
+/* v30: contador de la campanita */
+.notifications-nav .favorite-count {
+  background: #3b82f6;
+  color: #fff;
+  width: auto;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-weight: 700;
+  line-height: 1;
+  right: -4px;
+  top: -4px;
+  box-shadow: 0 0 0 2px var(--background);
+}
+
+.admin-row-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+
+.cosmetic-issues { border:0; padding:0; margin:0; min-width:0; }
+.cosmetic-issues legend { padding:0; margin-bottom:6px; }
+.cosmetic-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.cosmetic-tags span { background:#fef3c7; color:#92400e; border-radius:999px; padding:4px 10px; font-size:12.5px; font-weight:600; }
+
+.admin-nav-button { display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:999px; background:#0B0B0F; color:#fff; font-size:13px; font-weight:700; flex-shrink:0; }
+.admin-nav-button:hover { background:#3B82F6; }
+@media (max-width: 480px) { .admin-nav-button { width:34px; padding:0; justify-content:center; } .admin-nav-button span { display:none; } }

@@ -334,3 +334,53 @@ retomarlo sin perder contexto.
 - Móvil: se eliminó el desbordamiento horizontal de la página (botones del hero "Encuentra tu iPhone / Quiero vender" ensanchaban la pantalla y dejaban las ventanas cortadas y corridas). html/body con overflow-x: clip.
 - Ventanas: se quitó el centrado con translate (se aplicaba dos veces y dejaba la ventana corrida a la izquierda); ahora se centran con inset-0 + m-auto y en móvil ocupan toda la pantalla. El pie muestra "v18-oct" para comprobar que se desplegó esta versión.
 - Detalle del anuncio: la foto principal se adapta al ancho (altura entre 190 y 310 px, imagen contenida), así no tapa las miniaturas en pantallas muy pequeñas. Marca de versión: v18-oct-b.
+- Restablecer contraseña: antes de enviar el correo se comprueba que exista una cuenta con ese correo (función SQL imarket_email_registered, ya aplicada en Supabase; copia en supabase/migrations_email_registered.sql). Si no existe, se muestra "No existe ninguna cuenta registrada con ese correo." y no se envía nada. Nota: esto permite saber si un correo está registrado (enumeración de cuentas); aceptado a propósito. Marca de versión: v26-oct.
+- Límite de intentos en la comprobación de correo (5 por IP cada 10 min): SQL en supabase/migrations_email_rate_limit.sql — PENDIENTE de ejecutar en Supabase SQL Editor (la aplicación automática se canceló). La web ya muestra "Demasiados intentos" cuando se aplique.
+- Restablecer contraseña: ya no inicia sesión sola. La página detecta el enlace del correo (type=recovery) antes de revisar sesiones, muestra siempre el formulario de nueva contraseña, y al guardarla cierra la sesión temporal y pide iniciar sesión con la contraseña nueva. Incluye botón "Cancelar" (cierra la sesión temporal) y mensaje si el enlace expiró. Marca: v27-oct.
+- Antigüedad de anuncios: función timeAgo (lib/catalog.mjs). Menos de 1 h "Ahora", hasta 23 h en horas, desde 24 h en días ("Hace 3 d" en tarjetas, "Publicado hace 3 días" en el detalle), desde 30 días en meses. Usada en tarjetas, detalle y destacados. Marca: v28-oct.
+- Vistas por anuncio: la web cuenta una vista por persona cada 24 h (el vendedor no cuenta) y la muestra en las tarjetas (ojo + número) y en el detalle. Requiere ejecutar supabase/migrations_listing_views.sql en Supabase SQL Editor — PENDIENTE (la aplicación automática se canceló). Sin ese SQL el contador se queda en 0. Marca: v29-oct.
+
+## v30-oct — Notificaciones (campanita)
+- Causa: el botón de la campana no tenía `position: relative`, así que el contador (posición absoluta) quedaba fuera del icono. Corregido en `globals.css` (`.notifications-nav`), con insignia azul de marca y tope "9+".
+- Nuevo `refreshUnread()` en `use-remote-marketplace.js`: recarga solo los mensajes sin leer (sin reiniciar toda la sesión). Se dispara por Realtime (INSERT y UPDATE en `messages`), al volver a la pestaña/enfocar y cada 30 s como respaldo; también al cerrar la bandeja.
+
+## v31-oct — Dashboard: Anuncios y Pendientes
+- Pestaña **Anuncios**: lista los iPhone publicados (con Destacar/Quitar y **Eliminar** con motivo). Sustituye a la antigua pestaña "Destacados".
+- Pestaña nueva **Pendientes**: cola de revisión (aprobar o rechazar con motivo), con contador en el menú lateral.
+- Nueva RPC `imarket_admin_remove_listing` (eliminación lógica, status `deleted`, queda en el historial de moderación). Ya aplicada en Supabase; SQL en `supabase/migrations_admin_remove_listing.sql`.
+
+## v32-oct — Términos y condiciones
+- `/terminos` ya existía (enlazada desde el pie, el registro y Seguridad). Se amplió a 12 secciones (conductas no permitidas, destacados, limitación de responsabilidad, eliminación de cuenta) y la fecha de actualización ahora es fija.
+
+## v33-oct — Daños estéticos al publicar
+- Nuevo campo opcional "Daños estéticos" (casillas): cristal trasero dañado, cristal delantero dañado, mancha en pantalla, rayas en pantalla, marco golpeado. Se guarda en `listings.cosmetic_issues` (text[] con CHECK). La condición estética (Como nuevo/Excelente/Buen estado) se mantiene.
+- `imarket_create_listing` actualizada para validar y guardar el campo (migración ya aplicada en Supabase).
+- Se muestran como etiquetas en el detalle del anuncio y en la revisión del admin.
+
+## v34-oct — Tipo de batería
+- Nueva opción "Reemplazada / original" (batería cambiada por una pieza original) además de "Original" y "Genérica / reemplazada". Valor de enum `replaced_original` añadido a `listings.battery_type` (migración ya aplicada en Supabase). El detalle muestra "Reemplazada (original)" o "Reemplazada (genérica)".
+
+## v35-oct — Colores por modelo
+- El campo Color al publicar ahora es una lista que depende del modelo elegido (sin texto libre); al cambiar de modelo se reinicia. Catálogo en `lib/iphone-colors.mjs` (fuentes: Apple Newsroom/especificaciones para 17e, 18 Pro/Max y Duo; guías de colores de Apple/MacRumors para el resto). Para añadir un modelo o color nuevo, editar ese archivo.
+- iPhone SE reúne los colores de sus tres generaciones. Los anuncios ya publicados no cambian. Validación solo en el formulario (el servidor acepta cualquier texto de color).
+
+## v36-oct — Colores desde la base de datos
+- Nueva tabla `public.iphone_colors (model, color, position)` con lectura pública; el formulario carga los colores de ahí y usa `lib/iphone-colors.mjs` solo como respaldo si la tabla aún no existe.
+- `imarket_create_listing` valida en el servidor que el color exista para el modelo (error `IMARKET_INVALID_COLOR`).
+- **PENDIENTE: ejecutar `supabase/migrations_iphone_colors.sql` en el SQL Editor de Supabase** (la aplicación automática fue cancelada). Hasta entonces todo sigue funcionando con la lista local, sin validación en servidor.
+- Para añadir un color/modelo nuevo: `insert into public.iphone_colors values ('iPhone 18', 'Negro', 1);`
+
+## v37-oct — Avisos por correo
+- Ruta `app/api/notify/route.js` (Next.js, Node) envía el correo con **Gmail + nodemailer** (sin dominio propio). Protegida con cabecera secreta `x-notify-secret`.
+- `supabase/migrations_email_notifications.sql`: extensión `pg_net`, triggers en `messages` (máx. 1 aviso/10 min por conversación), `listings` (aprobado/rechazado) y `verification_requests` (aprobada/rechazada), y preferencia por usuario (casilla en "Editar mis datos").
+- Configuración manual necesaria: (1) variables en Vercel `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `NOTIFY_SECRET`, `NEXT_PUBLIC_SITE_URL`; (2) ejecutar el SQL; (3) insertar `notify_url` y `notify_secret` en `private.app_settings` (instrucciones al final del SQL). Sin esto no se envía nada y la web funciona igual.
+- Límite de Gmail: ~500 correos/día. Si crece, migrar a un servicio con dominio propio (Resend/Brevo).
+
+## v38-oct — Subida de documentos de identidad (y fotos de anuncios)
+- Causa probable: `compressPhoto` pedía WebP al canvas; **Safari de iPhone no codifica WebP y devuelve PNG**, y `uploadDataImages` rechazaba cualquier blob que no fuera WebP ("Invalid processed image"), que a su vez se mostraba como un error genérico. Afectaba a quien sube desde iPhone.
+- Corrección: si el navegador no produce WebP se usa JPEG (el bucket lo admite); la ruta usa `.webp` o `.jpg` según el tipo real.
+- Los errores de foto ahora muestran un mensaje claro (formato/peso/permisos) en vez del genérico.
+- Políticas de Storage y RPC `imarket_request_verification` revisadas: correctas (solo permiten subir a `verification-private` a cuentas sin verificar y no suspendidas, en la carpeta del propio usuario).
+
+## v39-oct — Botón "Panel" para admin
+- En la cabecera de la página principal, los administradores ven un botón "Panel" (solo icono en móvil) que lleva a `/dashboard`. Sigue existiendo el acceso desde el perfil. Visible solo si `remote.isAdmin` (rol `admin` en `user_roles`).

@@ -14,12 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-
-function ago(hours) {
-  if (hours < 1) return "Hace minutos";
-  if (hours < 24) return `Hace ${hours} h`;
-  return `Hace ${Math.floor(hours / 24)} d`;
-}
+import { timeAgo } from "../lib/catalog.mjs";
 
 function Chips({ item }) {
   return (
@@ -140,7 +135,7 @@ export default function FeaturedShowcase({
                   {main.seller} {main.verified && <BadgeCheck size={15} aria-label="Vendedor verificado" />}
                 </strong>
                 <small>
-                  <MapPin size={12} /> {main.location}, La Habana · {ago(main.hours)}
+                  <MapPin size={12} /> {main.location}, La Habana · {timeAgo(main.hours)}
                 </small>
               </div>
             </div>

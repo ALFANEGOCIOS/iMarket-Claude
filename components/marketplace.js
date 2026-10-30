@@ -28,6 +28,8 @@ import {
   Camera,
   Sparkles,
   Bell,
+  Eye,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   demoListings,
@@ -35,6 +37,8 @@ import {
   filterListings,
   municipalities,
   money,
+  timeAgo,
+  cosmeticLabel,
 } from "../lib/catalog.mjs";
 import { publicError } from "../lib/database.mjs";
 import useRemoteMarketplace from "../hooks/use-remote-marketplace";
@@ -184,7 +188,7 @@ export default function Marketplace() {
   }, []);
   const closeModal = useCallback(() => {
     setModal((current) => {
-      if (current === "inbox" && live) remote.refresh();
+      if (current === "inbox" && live) remote.refreshUnread();
       return null;
     });
     setContact(false);
@@ -317,6 +321,14 @@ export default function Marketplace() {
   }
   function openListing(item) {
     setSelected(item);
+    if (live) {
+      remote.registerView(item.id).then((total) => {
+        if (total == null) return;
+        setSelected((current) =>
+          current && current.id === item.id ? { ...current, views: total } : current,
+        );
+      });
+    }
     setActivePhoto(0);
     setContact(false);
     setModal("detail");
@@ -523,6 +535,16 @@ export default function Marketplace() {
           </nav>
           <div className="header-actions">
             
+            {live && user && remote.isAdmin && (
+              <button
+                className="admin-nav-button"
+                aria-label="Ir al panel de administración"
+                onClick={() => router.push("/dashboard")}
+              >
+                <LayoutDashboard size={17} />
+                <span>Panel</span>
+              </button>
+            )}
             {live && user && (
               <button
                 className="icon-button notifications-nav"
@@ -1140,12 +1162,17 @@ export default function Marketplace() {
                           </strong>
                           <span>
                             <Clock3 size={12} />
-                            {item.hours ? `Hace ${item.hours} h` : "Ahora"}
+                            {timeAgo(item.hours)}
                           </span>
                         </div>
                         <div className="product-location">
                           <MapPin size={12} />
                           {item.location}
+                          {live && (
+                            <span className="views-chip" title="Personas que han visto este anuncio">
+                              <Eye size={12} /> {item.views || 0}
+                            </span>
+                          )}
                         </div>
                         <div className="seller-row">
                           <span
@@ -1250,7 +1277,7 @@ export default function Marketplace() {
           <button onClick={() => router.push("/seguridad")}>
             Seguridad y privacidad
           </button>
-          <span>© {new Date().getFullYear()} iMarket · v18-oct-b</span>
+          <span>© {new Date().getFullYear()} iMarket · v39-oct</span>
         </div>
       </footer>
 
@@ -1383,7 +1410,7 @@ export default function Marketplace() {
             </form>
           )}
           {modal === "publish" && user && (
-            <PublishForm onPublish={publish} user={user} live={live} />
+            <PublishForm onPublish={publish} user={user} live={live} colorCatalog={remote.colorCatalog} />
           )}
           {modal === "detail" && selected && (
             <div className="detail-body">
@@ -1448,10 +1475,14 @@ export default function Marketplace() {
                   </span>
                   <span className="muted">
                     <Clock3 size={14} />{" "}
-                    {selected.hours
-                      ? `Publicado hace ${selected.hours} horas`
-                      : "Publicado ahora"}
+                    {timeAgo(selected.hours, { long: true })}
                   </span>
+                  {live && (
+                    <span className="muted">
+                      <Eye size={14} />{" "}
+                      {selected.views || 0} {(selected.views || 0) === 1 ? "persona ha visto" : "personas han visto"} este anuncio
+                    </span>
+                  )}
                   <div className="detail-seller">
                     <span
                       className="seller-avatar"
@@ -1520,7 +1551,7 @@ export default function Marketplace() {
                   [
                     BatteryFull,
                     "Batería",
-                    `${selected.battery === null ? "Sin informar" : `${selected.battery}%`} · ${selected.originalBattery ? "Original" : selected.batteryType === "unknown" ? "Sin confirmar" : "Reemplazada"}`,
+                    `${selected.battery === null ? "Sin informar" : `${selected.battery}%`} · ${selected.originalBattery ? "Original" : selected.batteryType === "replaced_original" ? "Reemplazada (original)" : selected.batteryType === "unknown" ? "Sin confirmar" : "Reemplazada (genérica)"}`,
                   ],
                   [
                     ShieldCheck,
@@ -1573,6 +1604,16 @@ export default function Marketplace() {
               <div className="detail-description">
                 <h4>Una palabra de su propietario</h4>
                 <p>{selected.description}</p>
+                {selected.cosmeticIssues?.length > 0 && (
+                  <>
+                    <h4>Daños estéticos</h4>
+                    <div className="cosmetic-tags">
+                      {selected.cosmeticIssues.map((key) => (
+                        <span key={key}>{cosmeticLabel(key)}</span>
+                      ))}
+                    </div>
+                  </>
+                )}
                 {selected.details && (
                   <>
                     <h4>Detalles del dispositivo</h4>

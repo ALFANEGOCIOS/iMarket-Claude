@@ -23,7 +23,7 @@ export default function TerminosPage() {
         <Badge variant="outline">Términos y condiciones</Badge>
         <h1>Condiciones de uso de iMarket</h1>
         <p className="lead">
-          Última actualización: {new Date().toLocaleDateString("es", { year: "numeric", month: "long" })}.
+          Última actualización: octubre de 2026.
           Al crear una cuenta o usar iMarket aceptas estas condiciones.
         </p>
 
@@ -100,14 +100,47 @@ export default function TerminosPage() {
           el equipo de moderación de iMarket.
         </p>
 
-        <h2>7. Cambios en estas condiciones</h2>
+        <h2>7. Contenido y conductas no permitidas</h2>
+        <ul className="bullet-list">
+          <li>Fotos o descripciones que no correspondan al equipo real, o que no sean tuyas.</li>
+          <li>Precios engañosos, anuncios duplicados o publicar un equipo que ya vendiste.</li>
+          <li>Pedir pagos por adelantado, enviar enlaces externos sospechosos o intentar estafar.</li>
+          <li>Acoso, lenguaje ofensivo o uso de la mensajería para fines ajenos a la compraventa.</li>
+          <li>Crear varias cuentas para evadir una suspensión o una verificación.</li>
+        </ul>
+
+        <h2>8. Anuncios destacados</h2>
+        <p>
+          Algunos anuncios pueden mostrarse en una franja destacada al inicio
+          del marketplace. Destacar un anuncio no es una garantía de venta ni
+          implica que iMarket respalde el equipo o al vendedor.
+        </p>
+
+        <h2>9. Limitación de responsabilidad</h2>
+        <p>
+          iMarket se ofrece &quot;tal cual&quot;. No garantizamos que el
+          servicio esté siempre disponible ni libre de errores, y no somos
+          responsables por pérdidas derivadas de una compraventa entre
+          usuarios, de información incorrecta publicada por ellos o del
+          incumplimiento de lo acordado entre las partes.
+        </p>
+
+        <h2>10. Eliminar tu cuenta</h2>
+        <p>
+          Puedes pedir el cierre de tu cuenta desde la sección de ayuda. Tus
+          anuncios se retiran y tus datos privados se eliminan, salvo la
+          información que debamos conservar para atender reportes o prevenir
+          fraudes.
+        </p>
+
+        <h2>11. Cambios en estas condiciones</h2>
         <p>
           Podemos actualizar estas condiciones según evolucione la
           plataforma. Si el cambio es significativo, lo avisaremos dentro de
           la aplicación.
         </p>
 
-        <h2>8. Contacto</h2>
+        <h2>12. Contacto</h2>
         <p>
           ¿Dudas sobre estas condiciones o quieres reportar algo? Escríbenos
           desde la sección de ayuda dentro de tu cuenta.

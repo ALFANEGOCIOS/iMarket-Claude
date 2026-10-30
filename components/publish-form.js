@@ -31,6 +31,8 @@ const MODELS = [
   "iPhone 6s Plus", "iPhone 6s", "iPhone 6 Plus", "iPhone 6",
 ];
 const STORAGE_OPTIONS = [16, 32, 64, 128, 256, 512, 1024];
+import { COSMETIC_ISSUES } from "../lib/catalog.mjs";
+import { colorsFor as localColorsFor } from "../lib/iphone-colors.mjs";
 const CONDITIONS = ["Como nuevo", "Excelente", "Buen estado"];
 const CHECK_FIELDS = [
   ["factoryUnlocked", "Libre de fábrica"],
@@ -42,7 +44,8 @@ const CHECK_FIELDS = [
   ["acceptsTrade", "Acepto intercambio"],
 ];
 
-export default function PublishForm({ onPublish, user, live = false }) {
+export default function PublishForm({ onPublish, user, live = false, colorCatalog = null }) {
+  const colorsFor = (name) => colorCatalog?.[name]?.length ? colorCatalog[name] : localColorsFor(name);
   const [photos, setPhotos] = useState([]);
   const [listingId] = useState(() => crypto.randomUUID());
   const [loading, setLoading] = useState(false);
@@ -50,8 +53,10 @@ export default function PublishForm({ onPublish, user, live = false }) {
   const [warranty, setWarranty] = useState(false);
   const [step, setStep] = useState(1);
   const [model, setModel] = useState("");
+  const [color, setColor] = useState("");
   const [storage, setStorage] = useState("128");
   const [condition, setCondition] = useState(CONDITIONS[1]);
+  const [issues, setIssues] = useState([]);
   const [batteryType, setBatteryType] = useState("original");
   const [location, setLocation] = useState("");
   const [checks, setChecks] = useState({
@@ -94,6 +99,10 @@ export default function PublishForm({ onPublish, user, live = false }) {
       setError("Añade al menos una foto de tu iPhone.");
       return;
     }
+    if (!color || !colorsFor(model).includes(color)) {
+      setError("Elige el color de tu iPhone de la lista.");
+      return;
+    }
     if (!terms) {
       setError("Debes confirmar que eres el propietario del iPhone.");
       return;
@@ -109,14 +118,16 @@ export default function PublishForm({ onPublish, user, live = false }) {
         price: Number(data.price),
         battery: Number(data.battery),
         condition,
+        cosmeticIssues: issues,
         location,
-        color: data.color,
+        color,
         description: data.description,
         details: data.details,
         factoryUnlocked: checks.factoryUnlocked,
         faceId: checks.faceId,
         trueTone: checks.trueTone,
         originalBattery: batteryType === "original",
+        batteryType,
         warrantyDays: warranty ? Number(data.warrantyDays) : 0,
         accessories: checks.includesCable && checks.includesCharger,
         includesCable: checks.includesCable,
@@ -229,7 +240,14 @@ export default function PublishForm({ onPublish, user, live = false }) {
       <div className="form-grid">
         <label className="stack-label">
           Modelo
-          <Select value={model} onValueChange={setModel} required>
+          <Select
+            value={model}
+            onValueChange={(value) => {
+              setModel(value);
+              setColor("");
+            }}
+            required
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecciona un modelo" />
             </SelectTrigger>
@@ -263,7 +281,18 @@ export default function PublishForm({ onPublish, user, live = false }) {
         </label>
         <label className="stack-label">
           Color
-          <Input required name="color" maxLength={40} placeholder="Ej. Titanio natural" />
+          <Select value={color} onValueChange={setColor} disabled={!model}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={model ? "Elige el color" : "Primero elige el modelo"} />
+            </SelectTrigger>
+            <SelectContent>
+              {colorsFor(model).map((x) => (
+                <SelectItem key={x} value={x}>
+                  {x}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
         <label className="stack-label">
           Condición estética
@@ -280,6 +309,24 @@ export default function PublishForm({ onPublish, user, live = false }) {
             </SelectContent>
           </Select>
         </label>
+        <fieldset className="stack-label cosmetic-issues">
+          <legend>Daños estéticos (opcional)</legend>
+          <div className="form-checks">
+            {COSMETIC_ISSUES.map(([id, label]) => (
+              <label key={id} className="checkbox-row">
+                <Checkbox
+                  checked={issues.includes(id)}
+                  onCheckedChange={(v) =>
+                    setIssues((current) =>
+                      v ? [...new Set([...current, id])] : current.filter((x) => x !== id),
+                    )
+                  }
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <label className="stack-label">
           Salud de batería (%)
           <Input name="battery" type="number" min="1" max="100" required placeholder="Ej. 96" />
@@ -292,6 +339,7 @@ export default function PublishForm({ onPublish, user, live = false }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="original">Original</SelectItem>
+              <SelectItem value="replaced_original">Reemplazada / original</SelectItem>
               <SelectItem value="generic">Genérica / reemplazada</SelectItem>
             </SelectContent>
           </Select>

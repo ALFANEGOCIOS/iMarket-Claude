@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { cosmeticLabel } from "../lib/catalog.mjs";
 import {
   LayoutGrid,
   Smartphone,
@@ -19,6 +20,8 @@ import {
   UserRound,
   Ban,
   X,
+  Clock,
+  Trash2,
 } from "lucide-react";
 import { compressPhoto } from "../lib/images";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
@@ -119,7 +122,21 @@ export function AccountSettings({ repository, user, onComplete }) {
     [error, setError] = useState(""),
     [municipality, setMunicipality] = useState(
       user.municipality || municipalities[0],
-    );
+    ),
+    [emailPref, setEmailPref] = useState(null);
+  useEffect(() => {
+    let active = true;
+    // Si la función aún no existe en Supabase, la casilla simplemente no se muestra.
+    repository
+      .emailPref()
+      .then((value) => {
+        if (active) setEmailPref(value);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [repository]);
   useEffect(() => {
     let active = true;
     repository
@@ -147,6 +164,7 @@ export function AccountSettings({ repository, user, onComplete }) {
         data.get("phone").trim(),
         data.get("address").trim(),
       );
+      if (emailPref !== null) await repository.setEmailPref(emailPref);
       onComplete();
     } catch (failure) {
       setError(publicError(failure));
@@ -212,6 +230,15 @@ export function AccountSettings({ repository, user, onComplete }) {
               defaultValue={privateData.exact_address || ""}
             />
           </label>
+          {emailPref !== null && (
+            <label className="checkbox-row">
+              <Checkbox
+                checked={emailPref}
+                onCheckedChange={(v) => setEmailPref(Boolean(v))}
+              />
+              Recibir avisos por correo (mensajes y estado de mis anuncios)
+            </label>
+          )}
           <Button variant="default" className="w-full" disabled={busy}>
             {busy ? "Guardando…" : "Guardar mis datos"}
           </Button>
@@ -463,7 +490,7 @@ const ADMIN_TABS = [
   { id: "resumen", label: "Resumen", icon: LayoutGrid },
   { id: "identidades", label: "Identidades", icon: ShieldCheck },
   { id: "anuncios", label: "Anuncios", icon: Smartphone },
-  { id: "destacados", label: "Destacados", icon: Star },
+  { id: "pendientes", label: "Pendientes", icon: Clock },
   { id: "usuarios", label: "Usuarios", icon: Users },
   { id: "reportes", label: "Reportes", icon: Flag },
   { id: "ventas", label: "Ventas", icon: DollarSign },
@@ -636,6 +663,27 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
       setBusy(false);
     }
   }
+  async function removeListing(listing) {
+    const reason = window.prompt(
+      `¿Eliminar "${listing.model}" de ${listing.seller?.display_name || "el vendedor"}? Escribe el motivo (mín. 5 caracteres):`,
+    );
+    if (reason === null) return;
+    if (reason.trim().length < 5) {
+      setError("Escribe un motivo de al menos 5 caracteres.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await repository.adminRemoveListing(listing.id, reason.trim());
+      await reload();
+      notify("Anuncio eliminado.");
+    } catch (failure) {
+      setError(publicError(failure));
+    } finally {
+      setBusy(false);
+    }
+  }
   useEffect(() => {
     let active = true;
     reload().catch((failure) => {
@@ -741,7 +789,7 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
   const attention = metrics
     ? [
         { label: "Identidades pendientes", value: metrics.pendingVerifications, tab: "identidades", tone: "warn" },
-        { label: "Anuncios por revisar", value: metrics.pendingListings, tab: "anuncios", tone: "info" },
+        { label: "Anuncios por revisar", value: metrics.pendingListings, tab: "pendientes", tone: "info" },
         { label: "Reportes abiertos", value: metrics.openReports, tab: "reportes", tone: "danger" },
         { label: "Ventas sin confirmar", value: metrics.reportedSales, tab: "ventas", tone: "muted" },
       ]
@@ -759,7 +807,7 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
             const Icon = item.icon;
             const badge =
               item.id === "identidades" ? metrics?.pendingVerifications
-              : item.id === "anuncios" ? metrics?.pendingListings
+              : item.id === "pendientes" ? metrics?.pendingListings
               : item.id === "reportes" ? metrics?.openReports
               : 0;
             return (
@@ -903,6 +951,54 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
 
       <TabsContent value="anuncios">
           <h4 className="profile-subheading">
+            Anuncios publicados ({published.length})
+          </h4>
+          {!published.length && (
+            <p className="muted">Todavía no hay iPhone publicados.</p>
+          )}
+          <p className="muted">
+            Los destacados aparecen en una franja especial al inicio del
+            marketplace. Eliminar retira el anuncio de la tienda.
+          </p>
+          {published.map((listing) => (
+            <div className="admin-row" key={listing.id}>
+              <div>
+                <strong>
+                  {listing.model} · {listing.storage_gb} GB
+                </strong>
+                <small>
+                  {listing.seller?.display_name || "—"} · ${listing.price_usd}{" "}
+                  USD{listing.featured_at ? " · Destacado" : ""}
+                </small>
+              </div>
+              <div className="admin-row-actions">
+              <button
+                type="button"
+                className={listing.featured_at ? "small-button" : "ghost-button"}
+                disabled={busy}
+                onClick={() =>
+                  toggleFeatured(listing.id, !listing.featured_at)
+                }
+              >
+                {listing.featured_at ? "Quitar de destacados" : "Destacar"}
+              </button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => removeListing(listing)}
+              >
+                <Trash2 size={13} />
+                Eliminar
+              </Button>
+              </div>
+            </div>
+          ))}
+      </TabsContent>
+
+      <TabsContent value="pendientes">
+          <h4 className="profile-subheading">
             Anuncios por revisar ({listings.length})
           </h4>
           {!listings.length && (
@@ -922,6 +1018,8 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
               <p className="muted">
                 ${listing.price} USD · {listing.storage} GB · Batería{" "}
                 {listing.battery ?? "sin informar"} · {listing.condition}
+                {listing.cosmeticIssues?.length > 0 &&
+                  ` · Daños: ${listing.cosmeticIssues.map(cosmeticLabel).join(", ")}`}
               </p>
               <DecisionForm
                 busy={busy}
@@ -930,39 +1028,6 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
                 }
               />
             </section>
-          ))}
-      </TabsContent>
-
-      <TabsContent value="destacados">
-          <h4 className="profile-subheading">
-            Anuncios publicados ({published.length})
-          </h4>
-          <p className="muted">
-            Los destacados aparecen en una franja especial al inicio del
-            marketplace.
-          </p>
-          {published.map((listing) => (
-            <div className="admin-row" key={listing.id}>
-              <div>
-                <strong>
-                  {listing.model} · {listing.storage_gb} GB
-                </strong>
-                <small>
-                  {listing.seller?.display_name || "—"} · ${listing.price_usd}{" "}
-                  USD
-                </small>
-              </div>
-              <button
-                type="button"
-                className={listing.featured_at ? "small-button" : "ghost-button"}
-                disabled={busy}
-                onClick={() =>
-                  toggleFeatured(listing.id, !listing.featured_at)
-                }
-              >
-                {listing.featured_at ? "Quitar de destacados" : "Destacar"}
-              </button>
-            </div>
           ))}
       </TabsContent>
 

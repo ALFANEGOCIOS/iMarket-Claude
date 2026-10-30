@@ -23,30 +23,67 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordAgain, setNewPasswordAgain] = useState("");
 
+  const [checked, setChecked] = useState(false);
+  const RECOVERY_FLAG = "imarket-recovery";
+
+  // Se ejecuta primero: detecta si la persona llegó desde el enlace del correo
+  // (la URL trae type=recovery) ANTES de decidir si ya hay una sesión "normal".
+  useEffect(() => {
+    try {
+      const url = `${window.location.hash}&${window.location.search}`;
+      if (/type=recovery/.test(url)) {
+        sessionStorage.setItem(RECOVERY_FLAG, "1");
+        setRecovery(true);
+      } else if (/error_code=|error=access_denied|otp_expired/.test(url)) {
+        setError("El enlace expiró o ya se usó. Pide uno nuevo desde \"¿Olvidaste tu contraseña?\".");
+      } else if (sessionStorage.getItem(RECOVERY_FLAG) === "1") {
+        // Recargó la página en medio del proceso: sigue en modo restablecer
+        // solo si la sesión temporal todavía existe.
+        const client = getSupabase();
+        if (client) {
+          client.auth.getSession().then(({ data }) => {
+            if (data.session) setRecovery(true);
+            else { try { sessionStorage.removeItem(RECOVERY_FLAG); } catch {} }
+            setChecked(true);
+          });
+          return;
+        }
+      }
+    } catch {}
+    setChecked(true);
+  }, []);
+
   useEffect(() => {
     const client = getSupabase();
     if (!client) return;
-    // Cuando la persona vuelve del enlace de "olvidé mi contraseña", Supabase
-    // establece una sesión temporal y dispara este evento. Si no lo
-    // capturamos aquí, el efecto de abajo la mandaría directo al
-    // marketplace sin dejarla cambiar la contraseña.
     const { data: sub } = client.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setRecovery(true);
+      if (event === "PASSWORD_RECOVERY") {
+        try { sessionStorage.setItem(RECOVERY_FLAG, "1"); } catch {}
+        setRecovery(true);
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Solo redirige a una sesión existente cuando NO estamos restableciendo la contraseña.
   useEffect(() => {
     let active = true;
     const client = getSupabase();
-    if (!client || recovery) return;
+    if (!client || !checked || recovery) return;
     client.auth.getSession().then(async ({ data }) => {
       if (!active || !data.session) return;
       if (await isCurrentUserAdmin(client)) router.replace("/dashboard");
       else router.replace("/");
     });
     return () => { active = false; };
-  }, [router, recovery]);
+  }, [router, recovery, checked]);
+
+  async function cancelRecovery() {
+    const client = getSupabase();
+    try { sessionStorage.removeItem(RECOVERY_FLAG); } catch {}
+    await client?.auth.signOut();
+    setRecovery(false); setNewPassword(""); setNewPasswordAgain(""); setError(""); setNotice("");
+  }
 
   async function submitNewPassword(event) {
     event.preventDefault();
@@ -58,9 +95,13 @@ export default function LoginPage() {
     try {
       const { error: updateError } = await client.auth.updateUser({ password: newPassword });
       if (updateError) throw updateError;
-      setNotice("Tu contraseña se actualizó. Ya puedes seguir usando iMarket.");
+      // La sesión del enlace era solo para cambiar la contraseña: se cierra
+      // y la persona debe iniciar sesión con la contraseña nueva.
+      try { sessionStorage.removeItem(RECOVERY_FLAG); } catch {}
+      await client.auth.signOut();
+      setNewPassword(""); setNewPasswordAgain(""); setPassword("");
       setRecovery(false);
-      setTimeout(() => router.replace("/"), 1200);
+      setNotice("Tu contraseña se actualizó. Inicia sesión con tu nueva contraseña.");
     } catch (failure) {
       setError(failure?.message || "No pudimos actualizar tu contraseña.");
     } finally {
@@ -89,12 +130,31 @@ export default function LoginPage() {
 
   async function forgotPassword() {
     setError(""); setNotice("");
-    if (!email.trim()) { setError("Escribe primero tu correo electrónico."); return; }
+    const address = email.trim();
+    if (!address) { setError("Escribe primero tu correo electrónico."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) { setError("Escribe un correo electrónico válido."); return; }
     const client = getSupabase();
     if (!client) { setError("Supabase no está configurado."); return; }
-    const { error: resetError } = await client.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/login` });
-    if (resetError) setError(resetError.message);
-    else setNotice("Te enviamos las instrucciones para restablecer tu contraseña.");
+    setBusy(true);
+    try {
+      // 1) Comprobar que el correo pertenece a una cuenta antes de enviar nada.
+      const { data: registered, error: checkError } = await client.rpc("imarket_email_registered", { p_email: address });
+      if (checkError) {
+        setError(/IMARKET_RATE_LIMIT/.test(String(checkError.message || "")) ? "Demasiados intentos. Espera unos minutos e inténtalo de nuevo." : "No pudimos comprobar el correo. Inténtalo de nuevo en un momento.");
+        return;
+      }
+      if (!registered) { setError("No existe ninguna cuenta registrada con ese correo."); return; }
+      // 2) Solo entonces se envía el correo de restablecimiento.
+      const { error: resetError } = await client.auth.resetPasswordForEmail(address, { redirectTo: `${window.location.origin}/login` });
+      if (resetError) {
+        const message = String(resetError.message || "");
+        setError(/rate limit|security purposes/i.test(message) ? "Has pedido demasiados correos. Espera unos minutos e inténtalo de nuevo." : message);
+      } else {
+        setNotice("Te enviamos las instrucciones para restablecer tu contraseña. Revisa también la carpeta de spam.");
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -119,6 +179,7 @@ export default function LoginPage() {
                   {error && <div className="auth-alert error" role="alert">{error}</div>}
                   {notice && <div className="auth-alert success" role="status">{notice}</div>}
                   <Button type="submit" disabled={busy} className="auth-submit">{busy ? "Guardando…" : "Guardar nueva contraseña"}<ArrowRight size={17} /></Button>
+                  <button type="button" className="auth-link-button" onClick={cancelRecovery} disabled={busy}>Cancelar y volver a iniciar sesión</button>
                 </form>
               </CardContent>
             </>

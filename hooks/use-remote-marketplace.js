@@ -23,6 +23,7 @@ export default function useRemoteMarketplace(filters, limit) {
     [sales, setSales] = useState([]),
     [unread, setUnread] = useState([]);
   const [featured, setFeatured] = useState([]);
+  const [colorCatalog, setColorCatalog] = useState(null);
   const [catalog, setCatalog] = useState({ items: [], total: 0 }),
     [contract, setContract] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false),
@@ -38,6 +39,14 @@ export default function useRemoteMarketplace(filters, limit) {
     () => setRefreshToken((current) => current + 1),
     [],
   );
+  const refreshUnread = useCallback(async () => {
+    if (!repository || !user?.id) return;
+    try {
+      setUnread(await repository.unreadMessages(user.id));
+    } catch {
+      /* el contador se reintenta en el siguiente ciclo */
+    }
+  }, [repository, user?.id]);
   useEffect(() => {
     if (!live) return;
     let active = true;
@@ -133,21 +142,50 @@ export default function useRemoteMarketplace(filters, limit) {
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           if (payload.new?.sender_id && payload.new.sender_id !== user.id) {
-            refresh();
+            refreshUnread();
           }
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        () => refreshUnread(),
+      )
       .subscribe();
+    // Respaldo si Realtime falla: al volver a la pestaña y cada 30 s.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshUnread();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const timer = setInterval(refreshUnread, 30000);
     return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      clearInterval(timer);
       client.removeChannel(channel);
     };
-  }, [live, client, user?.id, refresh]);
+  }, [live, client, user?.id, refreshUnread]);
   const filterKey = JSON.stringify({
     account: user?.id || null,
     refreshToken,
     ...filters,
     favorites: filters.favoritesOnly ? favorites : undefined,
   });
+  useEffect(() => {
+    if (!repository || !authReady || !contract) return;
+    let active = true;
+    // Catálogo de colores por modelo; si la tabla aún no existe se usa el local.
+    repository
+      .colors()
+      .then((catalog) => {
+        if (active && Object.keys(catalog).length) setColorCatalog(catalog);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [repository, authReady, contract]);
   useEffect(() => {
     if (!repository || !authReady || !contract) return;
     let active = true;
@@ -228,6 +266,7 @@ export default function useRemoteMarketplace(filters, limit) {
     items: catalog.items,
     total: catalog.total,
     featured,
+    colorCatalog,
     contract,
     isAdmin,
     loading,
@@ -235,6 +274,23 @@ export default function useRemoteMarketplace(filters, limit) {
     error: configurationError || authError || error,
     authReady,
     refresh,
+    refreshUnread,
+    async registerView(id) {
+      if (!repository) return null;
+      try {
+        let viewer = "";
+        try {
+          viewer = localStorage.getItem("imarket-viewer") || "";
+          if (!viewer) {
+            viewer = crypto.randomUUID();
+            localStorage.setItem("imarket-viewer", viewer);
+          }
+        } catch {}
+        return await repository.registerView(id, viewer);
+      } catch {
+        return null;
+      }
+    },
     async favorite(id) {
       const current = requireUser();
       await repository.favorite(current.id, id, !favorites.includes(id));
