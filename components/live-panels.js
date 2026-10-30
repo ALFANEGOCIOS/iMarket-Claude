@@ -616,6 +616,7 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
   const [verifications, setVerifications] = useState([]),
     [listings, setListings] = useState([]),
     [users, setUsers] = useState([]),
+    [roleRows, setRoleRows] = useState([]),
     [reports, setReports] = useState([]),
     [sales, setSales] = useState([]),
     [published, setPublished] = useState([]),
@@ -629,6 +630,7 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
       requests,
       pending,
       allUsers,
+      allRoles,
       allReports,
       allSales,
       allPublished,
@@ -637,6 +639,7 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
       repository.verificationQueue(),
       repository.listingQueue(),
       repository.adminUsers(),
+      repository.adminRoles(),
       repository.adminReports(),
       repository.adminSales(),
       repository.adminListings(),
@@ -645,6 +648,7 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
     setVerifications(requests);
     setListings(pending);
     setUsers(allUsers);
+    setRoleRows(allRoles);
     setReports(allReports);
     setSales(allSales);
     setPublished(allPublished);
@@ -739,12 +743,17 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
     }
   }
   async function toggleRole(userId, role, grant) {
+    if (
+      !grant &&
+      !window.confirm("¿Quitar el rol de moderador a este usuario? Perderá el acceso de moderación de inmediato.")
+    )
+      return;
     setBusy(true);
     setError("");
     try {
       await repository.adminSetRole(userId, role, grant);
       await reload();
-      notify(grant ? "Rol otorgado." : "Rol revocado.");
+      notify(grant ? "Ahora es moderador." : "Rol de moderador quitado.");
     } catch (failure) {
       setError(publicError(failure));
     } finally {
@@ -1036,7 +1045,15 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
           {users.map((person) => (
             <div className="admin-row" key={person.id}>
               <div>
-                <strong>{person.display_name}</strong>
+                <strong>
+                  {person.display_name}
+                  {roleRows.some((r) => r.user_id === person.id && r.role === "admin") && (
+                    <span className="role-chip">Admin</span>
+                  )}
+                  {roleRows.some((r) => r.user_id === person.id && r.role === "moderator") && (
+                    <span className="role-chip">Moderador</span>
+                  )}
+                </strong>
                 <small>
                   {person.municipality || "Sin municipio"} ·{" "}
                   {person.verification_status} ·{" "}
@@ -1073,14 +1090,22 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
               >
                 <Ban size={12} /> {person.is_banned ? "Desbanear" : "Banear"}
               </Button>
-              <Button
-                type="button"
-                variant="ghost" size="sm"
-                disabled={busy}
-                onClick={() => toggleRole(person.id, "moderator", true)}
-              >
-                + Moderador
-              </Button>
+              {(() => {
+                const roles = roleRows.filter((r) => r.user_id === person.id).map((r) => r.role);
+                if (roles.includes("admin") || person.id === user?.id) return null;
+                const isMod = roles.includes("moderator");
+                return (
+                  <Button
+                    type="button"
+                    variant={isMod ? "outline" : "ghost"}
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => toggleRole(person.id, "moderator", !isMod)}
+                  >
+                    {isMod ? "Quitar moderador" : "+ Moderador"}
+                  </Button>
+                );
+              })()}
             </div>
           ))}
       </TabsContent>

@@ -384,3 +384,19 @@ retomarlo sin perder contexto.
 
 ## v39-oct — Botón "Panel" para admin
 - En la cabecera de la página principal, los administradores ven un botón "Panel" (solo icono en móvil) que lleva a `/dashboard`. Sigue existiendo el acceso desde el perfil. Visible solo si `remote.isAdmin` (rol `admin` en `user_roles`).
+
+## v40-oct — URL propia por anuncio + SEO
+- Nueva página pública `app/anuncio/[id]/page.js` (renderizada en servidor, caché 5 min): fotos, precio, características y vendedor, con título/descripción/Open Graph/canonical y datos estructurados `Product` (JSON-LD) para Google. Solo muestra anuncios activos de vendedores verificados y no suspendidos; el resto da 404.
+- Botón **Compartir** (menú nativo en móvil, copia el enlace en escritorio) en el modal y en la página; comparte `https://…/anuncio/ID`.
+- `/?anuncio=ID` abre el detalle en la tienda (lo usa el botón "Contactar al vendedor" de la página pública).
+- `app/sitemap.js` (`/sitemap.xml`, incluye todos los anuncios) y `app/robots.js` (bloquea `/dashboard` y `/api/`). URL base: `NEXT_PUBLIC_SITE_URL` (por defecto https://imarketcuba.vercel.app).
+- Pendiente de decidir: usar el dominio definitivo cuando exista (cambiar `NEXT_PUBLIC_SITE_URL`); anuncios vendidos hoy dan 404.
+
+## v41-oct — Condición estética + borrador automático
+- Condiciones: Como nuevo · Excelente · Buen estado con detalles · Funcional con detalles (enums `like_new`, `excellent`, `good`, `acceptable`; no requiere migración: `acceptable` ya existía y se resuelve en `lib/database.mjs`). Lista única en `lib/catalog.mjs` (`CONDITIONS`), usada también por los filtros.
+- Reglas del formulario: Excelente → sin daños; Como nuevo → casilla "Tiene algún daño estético" que despliega los checks (si se marca, exige uno); Buen estado/Funcional con detalles → checks obligatorios (mín. 1). Solo en el formulario; el servidor no lo exige.
+- Anuncios con `good` ya publicados pasan a mostrarse como "Buen estado con detalles".
+- Borrador: `lib/draft.js` guarda todo (campos + fotos) en IndexedDB del navegador, por usuario, con 600 ms de retraso; se recupera al reabrir el formulario ("Empezar de nuevo" lo borra) y se elimina al enviar el anuncio.
+
+## v42-oct — Quitar rol de moderador
+- La función `imarket_admin_set_role` ya soportaba revocar; faltaba la interfaz. En Usuarios, el botón ahora alterna "+ Moderador" / "Quitar moderador" (con confirmación) y se muestran etiquetas Admin/Moderador. No aparece para admins ni para uno mismo (el servidor tampoco lo permite). Nuevo `repository.adminRoles()` (el admin puede leer todos los roles por RLS). Sin cambios en la base de datos.

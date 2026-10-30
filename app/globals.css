@@ -3922,3 +3922,29 @@ html, body { max-width: 100%; overflow-x: clip; }
 .admin-nav-button { display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:999px; background:#0B0B0F; color:#fff; font-size:13px; font-weight:700; flex-shrink:0; }
 .admin-nav-button:hover { background:#3B82F6; }
 @media (max-width: 480px) { .admin-nav-button { width:34px; padding:0; justify-content:center; } .admin-nav-button span { display:none; } }
+
+/* ===== Página pública de anuncio (/anuncio/[id]) ===== */
+.ad-page h1 { font-size: clamp(24px, 5vw, 34px); line-height: 1.15; margin-bottom: 8px; }
+.ad-page h2 { font-size: 18px; margin: 28px 0 8px; }
+.ad-price { font-size: 28px; font-weight: 800; color: var(--foreground); }
+.ad-price small { font-size: 14px; font-weight: 600; }
+.ad-price span { font-size: 14px; font-weight: 600; color: var(--muted-foreground); }
+.ad-location { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.ad-photos { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 18px 0; padding-bottom: 6px; }
+.ad-photos img { height: min(60vw, 360px); width: auto; max-width: 86%; object-fit: contain; background: var(--card); border: 1px solid var(--border); border-radius: 14px; scroll-snap-align: start; flex: none; }
+.ad-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ad-cta { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 20px; border-radius: 10px; background: #3B82F6; color: #fff; font-weight: 700; }
+.ad-cta:hover { background: #2563eb; }
+.ad-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.ad-specs div { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.ad-specs dt { font-size: 12px; color: var(--muted-foreground); }
+.ad-specs dd { margin: 2px 0 0; font-weight: 600; }
+.ad-seller { margin-top: 22px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 480px) { .ad-specs { grid-template-columns: minmax(0, 1fr); } }
+.detail-share { margin-top: 8px; width: 100%; }
+
+.draft-notice { font-size: 13px; }
+.link-button { background: none; border: 0; padding: 0; color: #3B82F6; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.required-mark { font-weight: 500; color: var(--muted-foreground); font-size: 12px; }
+
+.role-chip { margin-left:8px; padding:2px 8px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:11px; font-weight:700; vertical-align:middle; }

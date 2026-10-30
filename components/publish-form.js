@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, Check, LoaderCircle, X, ShieldCheck } from "lucide-react";
-import { municipalities } from "../lib/catalog.mjs";
+import { municipalities, CONDITIONS, conditionNeedsIssues } from "../lib/catalog.mjs";
+import { loadDraft, saveDraft, clearDraft } from "../lib/draft";
 import { compressPhoto } from "../lib/images";
 import { publicError } from "../lib/database.mjs";
 import { Button } from "./ui/button";
@@ -33,7 +34,6 @@ const MODELS = [
 const STORAGE_OPTIONS = [16, 32, 64, 128, 256, 512, 1024];
 import { COSMETIC_ISSUES } from "../lib/catalog.mjs";
 import { colorsFor as localColorsFor } from "../lib/iphone-colors.mjs";
-const CONDITIONS = ["Como nuevo", "Excelente", "Buen estado"];
 const CHECK_FIELDS = [
   ["factoryUnlocked", "Libre de fábrica"],
   ["faceId", "Face ID funciona"],
@@ -47,7 +47,7 @@ const CHECK_FIELDS = [
 export default function PublishForm({ onPublish, user, live = false, colorCatalog = null }) {
   const colorsFor = (name) => colorCatalog?.[name]?.length ? colorCatalog[name] : localColorsFor(name);
   const [photos, setPhotos] = useState([]);
-  const [listingId] = useState(() => crypto.randomUUID());
+  const [listingId, setListingId] = useState(() => crypto.randomUUID());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [warranty, setWarranty] = useState(false);
@@ -57,6 +57,29 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
   const [storage, setStorage] = useState("128");
   const [condition, setCondition] = useState(CONDITIONS[1]);
   const [issues, setIssues] = useState([]);
+  const [hasDamage, setHasDamage] = useState(false);
+  const [fields, setFields] = useState({
+    price: "",
+    battery: "",
+    neighborhood: "",
+    warrantyDays: "",
+    description: "",
+    details: "",
+  });
+  const [draftReady, setDraftReady] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const draftKey = `imarket-listing-${user?.id || "local"}`;
+  const field = (name) => ({
+    name,
+    value: fields[name],
+    onChange: (event) => {
+      const value = event.target.value;
+      setFields((previous) => ({ ...previous, [name]: value }));
+    },
+  });
+  const showIssues =
+    conditionNeedsIssues(condition) || (condition === "Como nuevo" && hasDamage);
+  const issuesRequired = showIssues;
   const [batteryType, setBatteryType] = useState("original");
   const [location, setLocation] = useState("");
   const [checks, setChecks] = useState({
@@ -69,6 +92,62 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
     acceptsTrade: false,
   });
   const [terms, setTerms] = useState(false);
+
+  // Recupera el borrador al abrir el formulario.
+  useEffect(() => {
+    let active = true;
+    loadDraft(draftKey).then((draft) => {
+      if (!active) return;
+      if (draft) {
+        if (draft.listingId) setListingId(draft.listingId);
+        setPhotos(draft.photos || []);
+        setModel(draft.model || "");
+        setColor(draft.color || "");
+        setStorage(draft.storage || "128");
+        setCondition(draft.condition || CONDITIONS[1]);
+        setIssues(draft.issues || []);
+        setHasDamage(Boolean(draft.hasDamage));
+        setBatteryType(draft.batteryType || "original");
+        setLocation(draft.location || "");
+        setChecks((previous) => ({ ...previous, ...(draft.checks || {}) }));
+        setWarranty(Boolean(draft.warranty));
+        setFields((previous) => ({ ...previous, ...(draft.fields || {}) }));
+        setStep(2);
+        setRestored(true);
+      }
+      setDraftReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [draftKey]);
+  // Guarda el borrador (con retraso corto) cada vez que cambia algo.
+  const saveTimer = useRef(null);
+  useEffect(() => {
+    if (!draftReady || step === 1) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveDraft(draftKey, {
+        listingId, photos, model, color, storage, condition, issues, hasDamage,
+        batteryType, location, checks, warranty, fields,
+      });
+    }, 600);
+    return () => clearTimeout(saveTimer.current);
+  }, [draftReady, step, draftKey, listingId, photos, model, color, storage, condition,
+      issues, hasDamage, batteryType, location, checks, warranty, fields]);
+  async function discardDraft() {
+    clearTimeout(saveTimer.current);
+    await clearDraft(draftKey);
+    setListingId(crypto.randomUUID());
+    setPhotos([]); setModel(""); setColor(""); setStorage("128");
+    setCondition(CONDITIONS[1]); setIssues([]); setHasDamage(false);
+    setBatteryType("original"); setLocation(""); setWarranty(false);
+    setChecks({ factoryUnlocked: true, faceId: true, trueTone: true,
+      includesCable: false, includesCharger: false, negotiable: false, acceptsTrade: false });
+    setFields({ price: "", battery: "", neighborhood: "", warrantyDays: "", description: "", details: "" });
+    setTerms(false);
+    setRestored(false);
+  }
 
   function toggleCheck(name, value) {
     setChecks((prev) => ({ ...prev, [name]: value }));
@@ -103,11 +182,19 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
       setError("Elige el color de tu iPhone de la lista.");
       return;
     }
+    if (issuesRequired && !issues.length) {
+      setError(
+        condition === "Como nuevo"
+          ? "Marca qué daño estético tiene o desmarca la casilla."
+          : "Marca al menos un daño estético: con esta condición es obligatorio.",
+      );
+      return;
+    }
     if (!terms) {
       setError("Debes confirmar que eres el propietario del iPhone.");
       return;
     }
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const data = fields;
     setLoading(true);
     setError("");
     try {
@@ -118,7 +205,7 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
         price: Number(data.price),
         battery: Number(data.battery),
         condition,
-        cosmeticIssues: issues,
+        cosmeticIssues: showIssues ? issues : [],
         location,
         color,
         description: data.description,
@@ -151,6 +238,8 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
         owner: true,
         createdAt: new Date().toISOString(),
       });
+      clearTimeout(saveTimer.current);
+      await clearDraft(draftKey);
     } catch (failure) {
       setError(publicError(failure));
     } finally {
@@ -203,6 +292,14 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
         Los pequeños detalles hacen grandes diferencias. Cuéntanos sobre tu
         iPhone.
       </p>
+      {restored && (
+        <div className="notice draft-notice">
+          Recuperamos tu borrador. Tus datos y fotos se guardan solos mientras escribes.{" "}
+          <button type="button" className="link-button" onClick={discardDraft}>
+            Empezar de nuevo
+          </button>
+        </div>
+      )}
       <Label>
         Fotos de tu iPhone <span>({photos.length}/5)</span>
       </Label>
@@ -277,7 +374,7 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
         </label>
         <label className="stack-label">
           Precio (USD)
-          <Input name="price" type="number" required min="1" max="10000" placeholder="Ej. 550" />
+          <Input {...field("price")} type="number" inputMode="decimal" required min="1" max="10000" placeholder="Ej. 550" />
         </label>
         <label className="stack-label">
           Color
@@ -309,27 +406,41 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
             </SelectContent>
           </Select>
         </label>
-        <fieldset className="stack-label cosmetic-issues">
-          <legend>Daños estéticos (opcional)</legend>
-          <div className="form-checks">
-            {COSMETIC_ISSUES.map(([id, label]) => (
-              <label key={id} className="checkbox-row">
-                <Checkbox
-                  checked={issues.includes(id)}
-                  onCheckedChange={(v) =>
-                    setIssues((current) =>
-                      v ? [...new Set([...current, id])] : current.filter((x) => x !== id),
-                    )
-                  }
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        {condition === "Como nuevo" && (
+          <label className="checkbox-row">
+            <Checkbox
+              checked={hasDamage}
+              onCheckedChange={(v) => setHasDamage(Boolean(v))}
+            />
+            Tiene algún daño estético
+          </label>
+        )}
+        {showIssues && (
+          <fieldset className="stack-label cosmetic-issues">
+            <legend>
+              Daños estéticos{" "}
+              <span className="required-mark">(marca al menos uno)</span>
+            </legend>
+            <div className="form-checks">
+              {COSMETIC_ISSUES.map(([id, label]) => (
+                <label key={id} className="checkbox-row">
+                  <Checkbox
+                    checked={issues.includes(id)}
+                    onCheckedChange={(v) =>
+                      setIssues((current) =>
+                        v ? [...new Set([...current, id])] : current.filter((x) => x !== id),
+                      )
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
         <label className="stack-label">
           Salud de batería (%)
-          <Input name="battery" type="number" min="1" max="100" required placeholder="Ej. 96" />
+          <Input {...field("battery")} type="number" inputMode="numeric" min="1" max="100" required placeholder="Ej. 96" />
         </label>
         <label className="stack-label">
           Tipo de batería
@@ -362,7 +473,7 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
       </div>
       <label className="stack-label">
         Barrio (opcional)
-        <Input name="neighborhood" maxLength={80} placeholder="Ej. Vedado" />
+        <Input {...field("neighborhood")} maxLength={80} placeholder="Ej. Vedado" />
       </label>
       <div className="form-checks">
         {CHECK_FIELDS.map(([name, label]) => (
@@ -382,13 +493,13 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
       {warranty && (
         <label className="stack-label">
           Días de garantía
-          <Input type="number" name="warrantyDays" min="1" max="365" required placeholder="Ej. 7" />
+          <Input {...field("warrantyDays")} type="number" inputMode="numeric" min="1" max="365" required placeholder="Ej. 7" />
         </label>
       )}
       <label className="stack-label">
         Descripción
         <Textarea
-          name="description"
+          {...field("description")}
           required
           minLength={20}
           maxLength={1500}
@@ -399,7 +510,7 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
       <label className="stack-label">
         ¿Tiene algún detalle?
         <Textarea
-          name="details"
+          {...field("details")}
           maxLength={500}
           rows={2}
           placeholder="Describe reparaciones, marcas o fallos, si los tiene."

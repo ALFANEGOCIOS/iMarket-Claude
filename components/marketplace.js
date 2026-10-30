@@ -39,8 +39,10 @@ import {
   money,
   timeAgo,
   cosmeticLabel,
+  CONDITIONS,
 } from "../lib/catalog.mjs";
 import { publicError } from "../lib/database.mjs";
+import ShareButton from "./share-button";
 import useRemoteMarketplace from "../hooks/use-remote-marketplace";
 import {
   VerificationForm,
@@ -333,6 +335,22 @@ export default function Marketplace() {
     setContact(false);
     setModal("detail");
   }
+  // Enlace directo /?anuncio=ID (desde la página pública del anuncio): abre el detalle.
+  const deepLinkDone = useRef(false);
+  useEffect(() => {
+    if (!live || deepLinkDone.current || !remote.authReady || !remote.repository) return;
+    const id = new URLSearchParams(window.location.search).get("anuncio");
+    deepLinkDone.current = true;
+    if (!id) return;
+    remote.repository
+      .listing(id)
+      .then((item) => {
+        if (item) openListing(item);
+      })
+      .catch(() => {})
+      .finally(() => window.history.replaceState(null, "", "/"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, remote.authReady, remote.repository]);
   function openPublish() {
     if (live && user && (user.is_suspended || user.is_banned)) {
       notify("Tu cuenta no puede publicar en este momento.");
@@ -874,7 +892,7 @@ export default function Marketplace() {
                 <AccordionItem value="condicion">
                   <AccordionTrigger>Condición</AccordionTrigger>
                   <AccordionContent>
-                    {["Como nuevo", "Excelente", "Buen estado"].map((condition) => (
+                    {CONDITIONS.map((condition) => (
                       <label key={condition} className="filter-checkbox">
                         <Checkbox
                           checked={filters.conditions.includes(condition)}
@@ -1277,7 +1295,7 @@ export default function Marketplace() {
           <button onClick={() => router.push("/seguridad")}>
             Seguridad y privacidad
           </button>
-          <span>© {new Date().getFullYear()} iMarket · v39-oct</span>
+          <span>© {new Date().getFullYear()} iMarket · v42-oct</span>
         </div>
       </footer>
 
@@ -1517,6 +1535,13 @@ export default function Marketplace() {
                     <MessageCircle size={17} />
                     {contact ? "Cerrar mensaje" : "Contactar al vendedor"}
                   </Button>
+                  {live && (
+                    <ShareButton
+                      id={selected.id}
+                      title={`${selected.model} ${selected.storage} GB`}
+                      className="detail-share"
+                    />
+                  )}
                 </div>
               </div>
               {contact && (

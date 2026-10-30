@@ -1,7 +1,10 @@
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
+import { SITE_URL } from "../lib/site";
 
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
+  openGraph: { siteName: "iMarket", locale: "es_CU", type: "website" },
   title: "iMarket — Tu próximo iPhone está aquí",
   description:
     "El punto de encuentro entre tu próximo iPhone y tú. Compra y vende iPhones de persona a persona en La Habana.",
