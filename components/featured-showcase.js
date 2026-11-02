@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { storageLabel } from "../lib/iphone-storage.mjs";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -111,7 +112,7 @@ export default function FeaturedShowcase({
               <div>
                 <h3>{main.model}</h3>
                 <p>
-                  {main.storage} GB{main.factoryUnlocked ? " · Libre de fábrica" : ""}
+                  {storageLabel(main.storage)}{main.factoryUnlocked ? " · Libre de fábrica" : ""}
                 </p>
               </div>
               <button
@@ -160,7 +161,7 @@ export default function FeaturedShowcase({
               <span className="fs-mini-body">
                 <strong>{item.model}</strong>
                 <small>
-                  {item.storage} GB · {item.condition}
+                  {storageLabel(item.storage)} · {item.condition}
                 </small>
                 <Chips item={{ battery: item.battery, warrantyDays: item.warrantyDays }} />
                 <span className="fs-mini-foot">

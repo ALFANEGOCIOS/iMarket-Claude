@@ -24,6 +24,7 @@ export default function useRemoteMarketplace(filters, limit) {
     [unread, setUnread] = useState([]);
   const [featured, setFeatured] = useState([]);
   const [colorCatalog, setColorCatalog] = useState(null);
+  const [storageCatalog, setStorageCatalog] = useState(null);
   const [catalog, setCatalog] = useState({ items: [], total: 0 }),
     [contract, setContract] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false),
@@ -182,6 +183,12 @@ export default function useRemoteMarketplace(filters, limit) {
         if (active && Object.keys(catalog).length) setColorCatalog(catalog);
       })
       .catch(() => {});
+    repository
+      .storages()
+      .then((catalog) => {
+        if (active && Object.keys(catalog).length) setStorageCatalog(catalog);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -267,6 +274,7 @@ export default function useRemoteMarketplace(filters, limit) {
     total: catalog.total,
     featured,
     colorCatalog,
+    storageCatalog,
     contract,
     isAdmin,
     loading,

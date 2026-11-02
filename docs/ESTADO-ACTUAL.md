@@ -400,3 +400,11 @@ retomarlo sin perder contexto.
 
 ## v42-oct — Quitar rol de moderador
 - La función `imarket_admin_set_role` ya soportaba revocar; faltaba la interfaz. En Usuarios, el botón ahora alterna "+ Moderador" / "Quitar moderador" (con confirmación) y se muestran etiquetas Admin/Moderador. No aparece para admins ni para uno mismo (el servidor tampoco lo permite). Nuevo `repository.adminRoles()` (el admin puede leer todos los roles por RLS). Sin cambios en la base de datos.
+
+## v43-oct — Almacenamiento por modelo + mensajes de error útiles
+- Al elegir modelo, el almacenamiento es una lista con solo las capacidades de ese modelo (`lib/iphone-storage.mjs`, respaldo local; fuente principal: tabla `public.iphone_storages`). Se muestra "1 TB"/"2 TB" donde antes decía "1024 GB". Filtro de almacenamiento incluye 2 TB.
+- **PENDIENTE: ejecutar `supabase/migrations_iphone_storages.sql`** (permite 2048 GB en `listings`, crea la tabla y valida en el servidor con `IMARKET_INVALID_STORAGE`). Sin él, 2 TB fallaría al publicar y no hay validación en servidor. Archivo 100 % ASCII.
+- `publicError`: ahora traduce IMARKET_INVALID_LISTING / INVALID_PHOTOS / OWNERSHIP_REQUIRED / INVALID_STORAGE y, para errores desconocidos, añade "(Detalle: …)" y lo registra en consola, para diagnosticar desde una captura.
+
+## v44-oct — Los admins publican al instante
+- `imarket_create_listing` guarda el anuncio como publicado (`active`, con `published_at`) cuando quien publica es admin; el resto sigue por revisión. Moderadores NO se publican solos. La web avisa "Tu anuncio ya está publicado." SQL: `supabase/migrations_admin_autopublish.sql` (también incluido en `migrations_iphone_storages.sql`; la función final es la misma en ambos, el orden no importa). El admin igualmente debe estar verificado para publicar.

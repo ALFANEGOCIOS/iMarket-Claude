@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { cosmeticLabel } from "../lib/catalog.mjs";
+import { storageLabel } from "../lib/iphone-storage.mjs";
 import {
   LayoutGrid,
   Smartphone,
@@ -973,7 +974,7 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
             <div className="admin-row" key={listing.id}>
               <div>
                 <strong>
-                  {listing.model} · {listing.storage_gb} GB
+                  {listing.model} · {storageLabel(listing.storage_gb)}
                 </strong>
                 <small>
                   {listing.seller?.display_name || "—"} · ${listing.price_usd}{" "}
@@ -1025,7 +1026,7 @@ export function AdminPanel({ repository, notify, user, onLogout }) {
                 ))}
               </div>
               <p className="muted">
-                ${listing.price} USD · {listing.storage} GB · Batería{" "}
+                ${listing.price} USD · {storageLabel(listing.storage)} · Batería{" "}
                 {listing.battery ?? "sin informar"} · {listing.condition}
                 {listing.cosmeticIssues?.length > 0 &&
                   ` · Daños: ${listing.cosmeticIssues.map(cosmeticLabel).join(", ")}`}

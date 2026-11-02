@@ -43,6 +43,7 @@ import {
 } from "../lib/catalog.mjs";
 import { publicError } from "../lib/database.mjs";
 import ShareButton from "./share-button";
+import { storageLabel } from "../lib/iphone-storage.mjs";
 import useRemoteMarketplace from "../hooks/use-remote-marketplace";
 import {
   VerificationForm,
@@ -379,9 +380,13 @@ export default function Marketplace() {
   }
   async function publish(item) {
     if (live) {
-      await remote.publish(item);
+      const result = await remote.publish(item);
       closeModal();
-      notify("Tu anuncio se envió a revisión. Aparecerá cuando sea aprobado.");
+      notify(
+        result?.status && result.status === remote.contract?.published
+          ? "Tu anuncio ya está publicado."
+          : "Tu anuncio se envió a revisión. Aparecerá cuando sea aprobado.",
+      );
       return;
     }
     setOwnListings((previous) => [item, ...previous]);
@@ -874,14 +879,14 @@ export default function Marketplace() {
                   <AccordionTrigger>Almacenamiento</AccordionTrigger>
                   <AccordionContent>
                     <div className="storage-options">
-                      {[16, 32, 64, 128, 256, 512, 1024].map((size) => (
+                      {[16, 32, 64, 128, 256, 512, 1024, 2048].map((size) => (
                         <button
                           key={size}
                           aria-pressed={filters.storage.includes(size)}
                           className={filters.storage.includes(size) ? "selected" : ""}
                           onClick={() => toggleFilter("storage", size)}
                         >
-                          {size === 1024 ? "1 TB" : `${size} GB`}
+                          {storageLabel(size)}
                         </button>
                       ))}
                     </div>
@@ -1156,7 +1161,7 @@ export default function Marketplace() {
                           <ArrowUpRight size={17} />
                         </button>
                         <p className="product-subtitle">
-                          {item.storage} GB <span>·</span> {item.color}
+                          {storageLabel(item.storage)} <span>·</span> {item.color}
                         </p>
                         <div className="product-specs">
                           <span
@@ -1295,7 +1300,7 @@ export default function Marketplace() {
           <button onClick={() => router.push("/seguridad")}>
             Seguridad y privacidad
           </button>
-          <span>© {new Date().getFullYear()} iMarket · v42-oct</span>
+          <span>© {new Date().getFullYear()} iMarket · v44-oct</span>
         </div>
       </footer>
 
@@ -1428,7 +1433,7 @@ export default function Marketplace() {
             </form>
           )}
           {modal === "publish" && user && (
-            <PublishForm onPublish={publish} user={user} live={live} colorCatalog={remote.colorCatalog} />
+            <PublishForm onPublish={publish} user={user} live={live} colorCatalog={remote.colorCatalog} storageCatalog={remote.storageCatalog} />
           )}
           {modal === "detail" && selected && (
             <div className="detail-body">
@@ -1473,7 +1478,7 @@ export default function Marketplace() {
                   <span className="detail-condition">{selected.condition}</span>
                   <h3>{selected.model}</h3>
                   <p>
-                    {selected.storage} GB · {selected.color}
+                    {storageLabel(selected.storage)} · {selected.color}
                   </p>
                   <strong className="detail-price">
                     ${money(selected.price)} <small>USD</small>

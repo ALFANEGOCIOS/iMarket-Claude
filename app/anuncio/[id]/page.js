@@ -4,6 +4,7 @@ import { ArrowLeft, BadgeCheck, MapPin } from "lucide-react";
 import { SITE_URL } from "../../../lib/site";
 import { getPublicListing } from "../../../lib/public-listings";
 import { COSMETIC_ISSUES } from "../../../lib/catalog.mjs";
+import { storageLabel } from "../../../lib/iphone-storage.mjs";
 import ShareButton from "../../../components/share-button";
 
 export const revalidate = 300;
@@ -17,14 +18,14 @@ const batteryLabel = (item) =>
       : item.batteryType === "unknown"
         ? "Sin confirmar"
         : "Reemplazada (genérica)";
-const heading = (item) => `${item.model} ${item.storage} GB ${item.color}`;
+const heading = (item) => `${item.model} ${storageLabel(item.storage)} ${item.color}`;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const item = await getPublicListing(id);
   if (!item) return { title: "Anuncio no disponible | iMarket", robots: { index: false } };
   const title = `${heading(item)} en La Habana | iMarket`;
-  const description = `${item.model} de ${item.storage} GB, ${item.color}, estado ${item.condition.toLowerCase()}${
+  const description = `${item.model} de ${storageLabel(item.storage)}, ${item.color}, estado ${item.condition.toLowerCase()}${
     item.battery ? `, batería ${item.battery}%` : ""
   }. $${item.price} USD en ${item.location}, La Habana. Vendedor verificado en iMarket.`;
   const url = `${SITE_URL}/anuncio/${item.id}`;
@@ -71,7 +72,7 @@ export default async function ListingPage({ params }) {
     },
   };
   const specs = [
-    ["Almacenamiento", `${item.storage} GB`],
+    ["Almacenamiento", storageLabel(item.storage)],
     ["Color", item.color],
     ["Estado", item.condition],
     ["Batería", `${item.battery == null ? "Sin informar" : `${item.battery}%`} · ${batteryLabel(item)}`],

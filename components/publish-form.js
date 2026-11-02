@@ -31,9 +31,9 @@ const MODELS = [
   "iPhone 8 Plus", "iPhone 8", "iPhone 7 Plus", "iPhone 7",
   "iPhone 6s Plus", "iPhone 6s", "iPhone 6 Plus", "iPhone 6",
 ];
-const STORAGE_OPTIONS = [16, 32, 64, 128, 256, 512, 1024];
 import { COSMETIC_ISSUES } from "../lib/catalog.mjs";
 import { colorsFor as localColorsFor } from "../lib/iphone-colors.mjs";
+import { storagesFor as localStoragesFor, storageLabel } from "../lib/iphone-storage.mjs";
 const CHECK_FIELDS = [
   ["factoryUnlocked", "Libre de fábrica"],
   ["faceId", "Face ID funciona"],
@@ -44,7 +44,8 @@ const CHECK_FIELDS = [
   ["acceptsTrade", "Acepto intercambio"],
 ];
 
-export default function PublishForm({ onPublish, user, live = false, colorCatalog = null }) {
+export default function PublishForm({ onPublish, user, live = false, colorCatalog = null, storageCatalog = null }) {
+  const storagesFor = (name) => storageCatalog?.[name]?.length ? storageCatalog[name] : localStoragesFor(name);
   const colorsFor = (name) => colorCatalog?.[name]?.length ? colorCatalog[name] : localColorsFor(name);
   const [photos, setPhotos] = useState([]);
   const [listingId, setListingId] = useState(() => crypto.randomUUID());
@@ -54,7 +55,7 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
   const [step, setStep] = useState(1);
   const [model, setModel] = useState("");
   const [color, setColor] = useState("");
-  const [storage, setStorage] = useState("128");
+  const [storage, setStorage] = useState("");
   const [condition, setCondition] = useState(CONDITIONS[1]);
   const [issues, setIssues] = useState([]);
   const [hasDamage, setHasDamage] = useState(false);
@@ -103,7 +104,7 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
         setPhotos(draft.photos || []);
         setModel(draft.model || "");
         setColor(draft.color || "");
-        setStorage(draft.storage || "128");
+        setStorage(draft.storage || "");
         setCondition(draft.condition || CONDITIONS[1]);
         setIssues(draft.issues || []);
         setHasDamage(Boolean(draft.hasDamage));
@@ -139,7 +140,7 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
     clearTimeout(saveTimer.current);
     await clearDraft(draftKey);
     setListingId(crypto.randomUUID());
-    setPhotos([]); setModel(""); setColor(""); setStorage("128");
+    setPhotos([]); setModel(""); setColor(""); setStorage("");
     setCondition(CONDITIONS[1]); setIssues([]); setHasDamage(false);
     setBatteryType("original"); setLocation(""); setWarranty(false);
     setChecks({ factoryUnlocked: true, faceId: true, trueTone: true,
@@ -176,6 +177,10 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
     event.preventDefault();
     if (!photos.length) {
       setError("Añade al menos una foto de tu iPhone.");
+      return;
+    }
+    if (!storage || !storagesFor(model).includes(Number(storage))) {
+      setError("Elige el almacenamiento de tu iPhone de la lista.");
       return;
     }
     if (!color || !colorsFor(model).includes(color)) {
@@ -342,6 +347,7 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
             onValueChange={(value) => {
               setModel(value);
               setColor("");
+              setStorage("");
             }}
             required
           >
@@ -359,14 +365,14 @@ export default function PublishForm({ onPublish, user, live = false, colorCatalo
         </label>
         <label className="stack-label">
           Almacenamiento
-          <Select value={storage} onValueChange={setStorage}>
+          <Select value={storage} onValueChange={setStorage} disabled={!model}>
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue placeholder={model ? "Elige el almacenamiento" : "Primero elige el modelo"} />
             </SelectTrigger>
             <SelectContent>
-              {STORAGE_OPTIONS.map((x) => (
+              {storagesFor(model).map((x) => (
                 <SelectItem key={x} value={String(x)}>
-                  {x === 1024 ? "1 TB" : `${x} GB`}
+                  {storageLabel(x)}
                 </SelectItem>
               ))}
             </SelectContent>
